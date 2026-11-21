@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>stats310a://final-ops</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app/vendor/katex/katex.min.css">
+<script defer src="app/vendor/katex/katex.min.js"></script>
+<script defer src="app/vendor/katex/auto-render.min.js"></script>
+<link rel="stylesheet" href="app/style.css">
+</head>
+<body>
+<div id="boot" aria-hidden="true"></div>
+
+<header id="top">
+  <div class="logo">
+    <span class="g">stats310a</span><span class="d">://</span><span class="a">final-ops</span>
+    <span class="cursor">█</span>
+  </div>
+  <div class="hud">
+    <span class="hud-k">T-MINUS</span> <span id="tminus">--:--:--:--</span>
+    <span class="sep">│</span><span class="hud-k">READY</span> <span id="ready">--%</span>
+    <span class="sep">│</span><span class="hud-k">DUE</span> <span id="due">--</span>
+  </div>
+</header>
+
+<nav id="nav"></nav>
+
+<main id="view" tabindex="-1"></main>
+
+<footer id="cmd">
+  <span class="prompt">λ&nbsp;›</span>
+  <input id="cmdline" autocomplete="off" spellcheck="false" placeholder="type 'help' — or press 1-9 · / focuses here">
+  <span id="cmdout"></span>
+</footer>
+
+<script src="app/data.js"></script>
+<script src="app/app.js"></script>
+</body>
+</html>
