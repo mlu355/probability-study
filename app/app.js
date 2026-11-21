@@ -9,9 +9,10 @@ const EXAM = new Date(D.meta.examStart);
 const KEY = "s310a.v1";
 
 // ───────────── state ─────────────
+const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
 const S = Object.assign({ srs: {}, self: {}, tasks: {}, log: [], scores: {}, theme: "green", seen: 0, streak: { last: "", n: 0 } },
-  JSON.parse(localStorage.getItem(KEY) || "{}"));
-const save = () => localStorage.setItem(KEY, JSON.stringify(S));
+  JSON.parse(store.get(KEY) || "{}"));
+const save = () => store.set(KEY, JSON.stringify(S));
 const today = () => new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD
 const daysLeft = () => Math.max(0, (EXAM - Date.now()) / DAY);
 
@@ -190,7 +191,7 @@ VIEWS.dojo = () => {
     return;
   }
   const p = D.proofs.find(x => x.id === arg); dojo.shown = 0;
-  const draft = localStorage.getItem("s310a.draft." + p.id) || "";
+  const draft = store.get("s310a.draft." + p.id) || "";
   paint(`<h1>${esc(p.title)}</h1><div class="d small"><a href="#" data-go="dojo">← all proofs</a> · cite ${esc(p.cite)} · ${esc(topicName(p.t))}</div>
 <div class="panel mt"><span class="a">CLAIM ›</span> ${esc(p.stmt)}</div>
 <div class="grid g2">
@@ -203,7 +204,7 @@ ${p.traps.length ? `<div class="step hidden" data-step="traps"><span class="r">T
 <div class="mt"><button class="btn pri" id="reveal">reveal next <kbd>space</kbd></button></div>
 </div></div>
 <div class="panel"><span class="d">how did it go?</span> ${gradeBtns()}</div>`);
-  $("#draft").addEventListener("input", e => localStorage.setItem("s310a.draft." + p.id, e.target.value));
+  $("#draft").addEventListener("input", e => store.set("s310a.draft." + p.id, e.target.value));
   $("#reveal").onclick = revealStep;
   view.querySelectorAll(".step").forEach(el => el.onclick = () => { el.classList.remove("hidden"); el.classList.add("shown"); });
 };
@@ -230,6 +231,7 @@ VIEWS.drill = () => {
   const f = $("#flip"); if (f) f.onclick = () => { drill.flipped = true; render(); };
 };
 
+let e_reset = 0;
 let exam = { id: null, t0: 0, tick: null, hints: {} };
 VIEWS.vault = () => {
   if (!arg) {
@@ -295,16 +297,17 @@ VIEWS.claude = () => {
 <div><span class="c">/make-cards</span> — regenerates the Anki deck from data.js</div>
 </div>
 <div class="panel tl" data-t="sync">
-<button class="btn pri" id="exp">export progress.json</button> <label class="btn">import <input type="file" id="imp" accept=".json" hidden></label>
+<button class="btn pri" id="exp">export progress.json</button> <button class="btn" id="expc">copy JSON</button> <label class="btn">import <input type="file" id="imp" accept=".json" hidden></label>
 <div class="mt small d">Save to <span class="c">progress/progress.json</span> in the repo and commit. Anki: <span class="c">python3 scripts/build_anki.py</span> → <span class="c">anki/stats310a.apkg</span> (same card IDs).</div>
 <div class="mt small"><button class="btn" id="theme">theme: ${S.theme}</button> <button class="btn bad" id="reset">reset all progress</button></div>
 </div></div>`);
   $("#exp").onclick = exportProgress;
+  $("#expc").onclick = () => navigator.clipboard.writeText(progressJSON()).then(() => say("copied — paste into progress/progress.json"), () => say("clipboard blocked"));
   $("#imp").onchange = ev => { const f = ev.target.files[0]; if (!f) return; f.text().then(t => { Object.assign(S, JSON.parse(t).state || JSON.parse(t)); save(); say("imported."); render(); }); };
   $("#theme").onclick = () => { S.theme = S.theme === "green" ? "amber" : "green"; applyTheme(); save(); render(); };
-  $("#reset").onclick = () => { if (confirm("wipe all progress?")) { localStorage.removeItem(KEY); location.reload(); } };
+  $("#reset").onclick = () => { if (e_reset++) { store.set(KEY, "{}"); location.reload(); } else say("click reset again to confirm"); };
 };
-function exportProgress() {
+function progressJSON() {
   const summary = {
     exported: new Date().toISOString(), daysLeft: +daysLeft().toFixed(1), readiness: +readiness().toFixed(3),
     topics: Object.fromEntries(leaves.map(t => [t.id, { title: t.title, mastery: +mastery(t.id).toFixed(2), self: S.self[t.id] ?? null, weight: t.w }])),
@@ -312,7 +315,10 @@ function exportProgress() {
     lapsed: Object.entries(S.srs).filter(([, s]) => s.lapses > 0).map(([id, s]) => ({ id, lapses: s.lapses })),
     planDone: Object.keys(S.tasks).filter(k => S.tasks[k]),
   };
-  const blob = new Blob([JSON.stringify({ summary, state: S }, null, 2)], { type: "application/json" });
+  return JSON.stringify({ summary, state: S }, null, 2);
+}
+function exportProgress() {
+  const blob = new Blob([progressJSON()], { type: "application/json" });
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "progress.json"; a.click();
 }
 
@@ -391,8 +397,7 @@ function matrixRain() {
     if (++n > 160) { clearInterval(id); cv.remove(); } }, 33);
 }
 function boot() {
-  if (sessionStorage.getItem("s310a.booted")) return Promise.resolve();
-  sessionStorage.setItem("s310a.booted", 1);
+  try { if (sessionStorage.getItem("s310a.booted")) return Promise.resolve(); sessionStorage.setItem("s310a.booted", 1); } catch {}
   const el = $("#boot"); el.style.display = "block";
   const lines = [
     "[  0.000] stats310a-final-ops kernel v1.0 — booting",
